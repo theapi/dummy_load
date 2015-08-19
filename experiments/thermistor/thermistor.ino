@@ -18,7 +18,8 @@
 #define PIN_LCD_D6 6
 #define PIN_LCD_D7 7
 
-#define PIN_SENSOR_THERMISTOR A0 // PC0
+#define PIN_THERMISTOR_MOSFET   A2
+#define PIN_THERMISTOR_RESISTOR A3
 
 // initialize the library with the numbers of the interface pins
 LiquidCrystal lcd(PIN_LCD_RS, PIN_LCD_E, PIN_LCD_D4, PIN_LCD_D5, PIN_LCD_D6, PIN_LCD_D7);
@@ -30,16 +31,21 @@ void setup() {
 
 void loop() {
   
-  int thermistor_read = analogRead(PIN_SENSOR_THERMISTOR);
-  double temperature = thermistor(thermistor_read);
+  int thermistor_mosfet = analogRead(PIN_THERMISTOR_MOSFET);
+  double temperature_mosfet = thermistor(thermistor_mosfet);
+  
+  int thermistor_resistor = analogRead(PIN_THERMISTOR_RESISTOR);
+  double temperature_resistor = thermistor(thermistor_resistor);
 
-  lcd.setCursor(0, 0);
-  lcd.print(temperature);
+  lcd.setCursor(0, 1);
+  lcd.print("m");
+  lcd.print(temperature_mosfet);
   lcd.print("C  ");
   
-  lcd.setCursor(0, 1);
-  lcd.print(thermistor_read);
-  lcd.print("  ");
+  lcd.setCursor(8, 1);
+  lcd.print("r");
+  lcd.print(temperature_resistor);
+  lcd.print("C  ");
   
   delay(1000);
 }
