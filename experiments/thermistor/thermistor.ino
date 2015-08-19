@@ -1,56 +1,38 @@
-/*
+/**
   LiquidCrystal Library to show the temperature measured by a thermistor.
  
  Uses the use a 16x2 LCD display.
  
-  The circuit:
- * LCD RS pin to digital pin 12
- * LCD Enable pin to digital pin 11
- * LCD D4 pin to digital pin 5
- * LCD D5 pin to digital pin 4
- * LCD D6 pin to digital pin 3
- * LCD D7 pin to digital pin 2
- * LCD R/W pin to ground
- * 10K resistor:
- * ends to +5V and ground
- * wiper to LCD VO pin (pin 3)
- 
- 
  @see http://www.arduino.cc/en/Tutorial/LiquidCrystal
  */
 
-// include the library code:
+
 #include <LiquidCrystal.h>
 #include <math.h>
 
-//#define THERMISTOR_DIVIDER 9860.0 // The value of the "10k" voltage divider resistor (10000.0)
+// LCD connections
+#define PIN_LCD_RS 12
+#define PIN_LCD_E 8
+#define PIN_LCD_D4 4
+#define PIN_LCD_D5 5
+#define PIN_LCD_D6 6
+#define PIN_LCD_D7 7
+
 #define PIN_SENSOR_THERMISTOR A0 // PC0
 
 // initialize the library with the numbers of the interface pins
-LiquidCrystal lcd(12, 11, 5, 4, 3, 2);
+LiquidCrystal lcd(PIN_LCD_RS, PIN_LCD_E, PIN_LCD_D4, PIN_LCD_D5, PIN_LCD_D6, PIN_LCD_D7);
 
 void setup() {
-  
-
-  
   // set up the LCD's number of columns and rows: 
   lcd.begin(16, 2);
-
 }
 
 void loop() {
   
   int thermistor_read = analogRead(PIN_SENSOR_THERMISTOR);
   double temperature = thermistor(thermistor_read);
-  
-  /*
-  // set the cursor to column 0, line 1
-  // (note: line 1 is the second row, since counting begins with 0):
-  lcd.setCursor(0, 1);
-  // print the number of seconds since reset:
-  lcd.print(millis()/1000);
-  */
-  
+
   lcd.setCursor(0, 0);
   lcd.print(temperature);
   lcd.print("C  ");
