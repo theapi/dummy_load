@@ -25,8 +25,8 @@ LiquidCrystal lcd(PIN_LCD_RS, PIN_LCD_E, PIN_LCD_D4, PIN_LCD_D5, PIN_LCD_D6, PIN
 
 void setup() 
 {
-  pinMode(2, INPUT_PULLUP);
-  pinMode(3, INPUT_PULLUP);
+  pinMode(2, INPUT);
+  pinMode(3, INPUT);
   
   // set up the LCD's number of columns and rows: 
   lcd.begin(16, 2);
@@ -39,7 +39,8 @@ void loop()
 {
   
   lcd.setCursor(0, 0);
-  lcd.print(encoder_counter);
+  lcd.print(encoder_counter / 4);
+lcd.print("    ");
 
 }
 
@@ -58,6 +59,9 @@ void encoder_ISR()
  */
 int8_t encoder_read()
 {
+  
+  
+  
   // enc_states[] array is a look-up table; 
   // it is pre-filled with encoder states, 
   // with “-1″ or “1″ being valid states and “0″ being invalid. 
@@ -69,6 +73,12 @@ int8_t encoder_read()
   static int8_t enc_states[] = {
     0,-1,1,0, 1,0,0,-1, -1,0,0,1, 0,1,-1,0
   };
+  
+  //static unsigned long last = 0;
+  // Debounce
+  //unsigned long now = millis();
+  //if (now - last > 100) {
+   // last = now;
   
   /*
    The lookup table of the binary values represented by enc_states 
@@ -108,15 +118,22 @@ int8_t encoder_read()
   // so the current reading can be correctly ORed.
   encoder_ab <<= 2;
   
-  // ENC_PORT & 0×03 reads the port to which encoder is connected 
-  // and sets all but two lower bits to zero 
+  // ENC_PORT reads the port to which encoder is connected 
+  byte port = ENC_PORT >> 2; // shift right so pins 2 & 3 are set right most
+  
+  // and set all but two lower bits to zero 
   // so when you OR it with ab bits 2-7 would stay intact. 
   // Then it gets ORed with ab. 
-  encoder_ab |= ( ENC_PORT & 0x03 );  //add current state
+  encoder_ab |= ( port & 0x03 );  //add current state
   // At this point, we have previous reading of encoder pins in bits 2,3 of ab, 
   // current readings in bits 0,1, and together they form index of (AKA pointer to) enc_states[]  
   // array element containing current state.
   // The index being the the lowest nibble of ab (ab & 0x0f)
+ // }
+  
+  
+ 
+  
   return ( enc_states[( encoder_ab & 0x0f )]);
 }
 
