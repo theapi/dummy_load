@@ -42,10 +42,14 @@ void loop()
   int temperature_resistor = readThermistor(PIN_THERMISTOR_RESISTOR);
   
   int millivolts = readVolts();
+  int milliamps = readAmps();
   
   lcd.setCursor(0, 0);
   lcd.print(millivolts);
   lcd.print("V  ");
+  lcd.setCursor(8, 0);
+  lcd.print(milliamps);
+  lcd.print("A  ");
 
   lcd.setCursor(0, 1);
   lcd.print("m:");
@@ -57,13 +61,28 @@ void loop()
   lcd.print(temperature_resistor);
   lcd.print("C  ");
   
-  delay(1000);
 }
 
+/**
+ * Read the volts on the power supply input & convert to millivolts.
+ */
 int readVolts()
 {
   int val = analogRead(PIN_VOLTS);
-  return val * (VREF / 1023);
+  // measured on a voltage divider 330K ---|--- 100K
+  // so getting about a quarter of the actual voltage.
+  return val * (VREF / 1023) * 4;
+}
+ 
+/**
+ * Read the volts across the load resistor & convert to milliamps.
+ */
+int readAmps()
+{
+  int val = analogRead(PIN_AMPS);
+  // 2v = 1A
+  // x2 gain from the op amp on a 1ohm resistor
+  return val * (VREF / 1023) * 2;
 }
  
 /**
