@@ -61,11 +61,11 @@ void loop()
   
     
   unsigned long now = millis();
-  if (now - lcd_update_last > 100) {
+  if (now - lcd_update_last > 10) {
     lcd_update_last = now;
     
     lcd.setCursor(0, 0);
-    lcd.print(encoder_counter / 4);
+    lcd.print(encoder_counter / 4 * -1);
     lcd.print("  ");
     lcd.print(millivolts);
     lcd.print("V  ");
