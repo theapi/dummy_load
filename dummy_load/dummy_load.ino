@@ -22,18 +22,29 @@
 #define PIN_THERMISTOR_MOSFET   A2
 #define PIN_THERMISTOR_RESISTOR A3
 
+#define PIN_VOLTS A0
+#define PIN_AMPS  A1
+
 // initialize the library with the numbers of the interface pins
 LiquidCrystal lcd(PIN_LCD_RS, PIN_LCD_E, PIN_LCD_D4, PIN_LCD_D5, PIN_LCD_D6, PIN_LCD_D7);
 
-void setup() {
+void setup() 
+{
   // set up the LCD's number of columns and rows: 
   lcd.begin(16, 2);
 }
 
-void loop() {
+void loop() 
+{
 
-  int temperature_mosfet = thermistor(PIN_THERMISTOR_MOSFET);
-  int temperature_resistor = thermistor(PIN_THERMISTOR_RESISTOR);
+  int temperature_mosfet = readThermistor(PIN_THERMISTOR_MOSFET);
+  int temperature_resistor = readThermistor(PIN_THERMISTOR_RESISTOR);
+  
+  int millivolts = readVolts();
+  
+  lcd.setCursor(0, 0);
+  lcd.print(millivolts);
+  lcd.print("V  ");
 
   lcd.setCursor(0, 1);
   lcd.print("m:");
@@ -48,13 +59,18 @@ void loop() {
   delay(1000);
 }
 
+int readVolts()
+{
+  int val = analogRead(PIN_VOLTS);
+  return val * (5000 / 1023);
+}
  
 /**
   * Read the thermistor & translate to degrees Celcius.
   *
   * @see http://playground.arduino.cc/ComponentLib/Thermistor2
  */
-int thermistor(byte pin) 
+int readThermistor(byte pin) 
 {   
   int raw_adc = analogRead(pin);
 
