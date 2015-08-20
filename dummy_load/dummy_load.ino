@@ -22,6 +22,7 @@
 #define PIN_THERMISTOR_MOSFET   A2
 #define PIN_THERMISTOR_RESISTOR A3
 
+#define VREF      4096
 #define PIN_VOLTS A0
 #define PIN_AMPS  A1
 
@@ -62,7 +63,7 @@ void loop()
 int readVolts()
 {
   int val = analogRead(PIN_VOLTS);
-  return val * (5000 / 1023);
+  return val * (VREF / 1023);
 }
  
 /**
