@@ -22,7 +22,7 @@
 #define PIN_THERMISTOR_MOSFET   A2
 #define PIN_THERMISTOR_RESISTOR A3
 
-#define VREF      4096
+#define VREF  5000 //(vref / 1023) * 4 //  4096 when voltage reference is in place
 #define PIN_VOLTS A0
 #define PIN_AMPS  A1
 
@@ -51,7 +51,7 @@ void loop()
 {
   static unsigned long lcd_update_last = 0;
   
-  //readEncoder();
+
   
   int temperature_mosfet = readThermistor(PIN_THERMISTOR_MOSFET);
   int temperature_resistor = readThermistor(PIN_THERMISTOR_RESISTOR);
@@ -87,39 +87,22 @@ void loop()
   
 }
 
-/*
-int readEncoder()
-{
-  static byte encoder_last = HIGH;
-  static unsigned long last = 0;
-  
-  // Debounce
-  unsigned long now = millis();
-  if (now - last > 2) {
-    last = now;
-  
-  byte n = digitalRead(PIN_ENCODER_A);
-    if ((encoder_last == LOW) && (n == HIGH)) {
-      if (digitalRead(PIN_ENCODER_B) == LOW) {
-        encoder_counter--;
-      } else {
-        encoder_counter++;
-      }
-    } 
-  encoder_last = n;
-  }
-}
-*/
-
 /**
  * Read the volts on the power supply input & convert to millivolts.
  */
 int readVolts()
 {
-  int val = analogRead(PIN_VOLTS);
-  // measured on a voltage divider 330K ---|--- 100K
-  // so getting about a quarter of the actual voltage.
-  return val * (VREF / 1023) * 4;
+  // Running average
+  // @see http://playground.arduino.cc/Main/RunningAverage
+  static int value = 0;
+  float alpha = 0.7; // factor to tune
+  
+  int measurement = analogRead(PIN_VOLTS);
+  value = alpha * measurement + (1-alpha) * value;
+
+  // measured on a voltage divider 300K ---|--- 100K
+  // so getting a quarter of the actual voltage.
+  return value * (VREF / 1023.0) * 4;
 }
  
 /**
@@ -127,10 +110,15 @@ int readVolts()
  */
 int readAmps()
 {
-  int val = analogRead(PIN_AMPS);
+  // Running average
+  static int value = 0;
+  float alpha = 0.7; // factor to tune
+  
+  int measurement = analogRead(PIN_AMPS);
+  value = alpha * measurement + (1-alpha) * value;
   // 2v = 1A
   // x2 gain from the op amp on a 1ohm resistor
-  return val * (VREF / 1023) * 2;
+  return value * (VREF / 1023.0) * 2;
 }
  
 /**
