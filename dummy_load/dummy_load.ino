@@ -62,7 +62,7 @@ void setup()
   
   // Set the voltage of channel A.
   MCPDAC.setVoltage(CHANNEL_A, 4000 & 0x0fff); // 4000 mV
-  //MCPDAC.setVoltage(CHANNEL_B, 4095 & 0x0fff);
+  
   
   
   pinMode(PIN_ENCODER_A, INPUT);
@@ -79,15 +79,12 @@ void loop()
 {
   static unsigned long lcd_update_last = 0;
   
-
+  int current = setCurrent();
   
   int temperature_mosfet = readThermistor(PIN_THERMISTOR_MOSFET);
   int temperature_resistor = readThermistor(PIN_THERMISTOR_RESISTOR);
   
   float volts = readVolts();
-
-  
-  
   int milliamps = readAmps();
   
     
@@ -96,7 +93,8 @@ void loop()
     lcd_update_last = now;
     
     lcd.setCursor(0, 0);
-    lcd.print(encoder_counter / 4 * -1);
+    //lcd.print(encoder_counter / 4 * -1);
+    lcd.print(current);
     lcd.print("  ");
     lcd.print(volts, 1);
     lcd.print("V  ");
@@ -118,6 +116,28 @@ void loop()
   
 }
 
+int setCurrent() 
+{
+  static int last = -1;
+  static int mv = 0;
+  
+  // Read the encoder counter but do not change it as it changed by the interrupt.
+  mv = (encoder_counter / 4) * -1 * 10;
+  
+  if (mv < 0) {
+    mv = 0; 
+  } else if (mv > 4000) {
+    mv = 4000; 
+  }
+  
+  if (mv != last) {
+    last = mv;
+    MCPDAC.setVoltage(CHANNEL_B, mv & 0x0fff);
+  }
+  
+  return mv;
+}
+
 /**
  * Read the volts on the power supply input & convert to millivolts.
  */
@@ -128,7 +148,7 @@ float readVolts()
   static float value = 0;
   float alpha = 0.7; // factor to tune
   
-  int junk = analogRead(PIN_VOLTS);
+  analogRead(PIN_VOLTS); // allow multiplexer to settle on this channel
   int measurement = (analogRead(PIN_VOLTS) + analogRead(PIN_VOLTS)) / 2;
   
   value = alpha * measurement + (1-alpha) * value;
