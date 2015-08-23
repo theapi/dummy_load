@@ -2,6 +2,8 @@
  *
  * Electronic dummy load.
  *
+ * Uses the MCPDAC library from http://hacking.majenko.co.uk/MCPDAC
+ *
  *
  * https://github.com/theapi/dummy_load
  *
@@ -10,9 +12,12 @@
 
 #include <LiquidCrystal.h>
 
+// MCPDAC relies on SPI.
+#include <SPI.h>
+#include <MCPDAC.h>
 
 // LCD connections
-#define PIN_LCD_RS 12
+#define PIN_LCD_RS 9
 #define PIN_LCD_E 8
 #define PIN_LCD_D4 4
 #define PIN_LCD_D5 5
@@ -22,9 +27,10 @@
 #define PIN_THERMISTOR_MOSFET   A2
 #define PIN_THERMISTOR_RESISTOR A3
 
-#define VREF  5000 //(vref / 1023) * 4 //  4096 when voltage reference is in place
-#define PIN_VOLTS A0
-#define PIN_AMPS  A1
+#define VREF  4000 //  4V reference from DAC
+#define PIN_DAC_CS 10
+#define PIN_VOLTS  A0
+#define PIN_AMPS   A1
 
 #define PIN_ENCODER_A 2
 #define PIN_ENCODER_B 3
@@ -37,6 +43,28 @@ volatile byte encoder_ab = 0; // The previous & current reading
 
 void setup() 
 {
+  
+  // Set to use the external DAC reference. MUST be called before an analogRead().
+  analogReference(EXTERNAL);
+  
+  // CS on pin 10, no LDAC pin (tie it to ground).
+  MCPDAC.begin(PIN_DAC_CS);
+  
+  // Set the gain to "HIGH" mode - 0 to 4096mV.
+  MCPDAC.setGain(CHANNEL_A,GAIN_HIGH);
+  
+  // Set the gain to "HIGH" mode - 0 to 4096mV.
+  MCPDAC.setGain(CHANNEL_B,GAIN_HIGH);
+  
+  // Do not shut down channels
+  MCPDAC.shutdown(CHANNEL_A,false);
+  MCPDAC.shutdown(CHANNEL_B,false);
+  
+  // Set the voltage of channel A.
+  MCPDAC.setVoltage(CHANNEL_A, 4000 & 0x0fff); // 4000 mV
+  //MCPDAC.setVoltage(CHANNEL_B, 4095 & 0x0fff);
+  
+  
   pinMode(PIN_ENCODER_A, INPUT);
   pinMode(PIN_ENCODER_B, INPUT);
   
@@ -56,7 +84,10 @@ void loop()
   int temperature_mosfet = readThermistor(PIN_THERMISTOR_MOSFET);
   int temperature_resistor = readThermistor(PIN_THERMISTOR_RESISTOR);
   
-  int millivolts = readVolts();
+  float volts = readVolts();
+
+  
+  
   int milliamps = readAmps();
   
     
@@ -67,7 +98,7 @@ void loop()
     lcd.setCursor(0, 0);
     lcd.print(encoder_counter / 4 * -1);
     lcd.print("  ");
-    lcd.print(millivolts);
+    lcd.print(volts, 1);
     lcd.print("V  ");
     //lcd.setCursor(8, 0);
     lcd.print(milliamps);
@@ -90,19 +121,21 @@ void loop()
 /**
  * Read the volts on the power supply input & convert to millivolts.
  */
-int readVolts()
+float readVolts()
 {
   // Running average
   // @see http://playground.arduino.cc/Main/RunningAverage
-  static int value = 0;
+  static float value = 0;
   float alpha = 0.7; // factor to tune
   
-  int measurement = analogRead(PIN_VOLTS);
+  int junk = analogRead(PIN_VOLTS);
+  int measurement = (analogRead(PIN_VOLTS) + analogRead(PIN_VOLTS)) / 2;
+  
   value = alpha * measurement + (1-alpha) * value;
 
-  // measured on a voltage divider 300K ---|--- 100K
-  // so getting a quarter of the actual voltage.
-  return value * (VREF / 1023.0) * 4;
+  // measured on a voltage divider 400K ---|--- 100K
+  // so getting a fith of the actual voltage.
+  return value * (VREF / 1023.0) * 5 / 1000;
 }
  
 /**
@@ -112,7 +145,7 @@ int readAmps()
 {
   // Running average
   static int value = 0;
-  float alpha = 0.7; // factor to tune
+  float alpha = 0.8; // factor to tune
   
   int measurement = analogRead(PIN_AMPS);
   value = alpha * measurement + (1-alpha) * value;
