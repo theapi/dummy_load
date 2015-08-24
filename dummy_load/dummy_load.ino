@@ -35,6 +35,19 @@
 #define PIN_ENCODER_A 2
 #define PIN_ENCODER_B 3
 
+// Thermistor datasheet http://uk.farnell.com/vishay-bc-components/ntcle100e3103jb0/thermistor-10k-5-ntc-rad/dp/1187031
+// resistance at 25 degrees C
+#define THERMISTORNOMINAL 10000      
+// temp. for nominal resistance (almost always 25 C)
+#define TEMPERATURENOMINAL 25  
+// how many samples to take and average, more takes longer
+// but is more 'smooth'
+#define NUMSAMPLES 5
+// The beta coefficient of the thermistor (usually 3000-4000)
+#define BCOEFFICIENT 3977
+// the value of the 'other' resistor
+#define SERIESRESISTOR 9850   
+
 // initialize the library with the numbers of the interface pins
 LiquidCrystal lcd(PIN_LCD_RS, PIN_LCD_E, PIN_LCD_D4, PIN_LCD_D5, PIN_LCD_D6, PIN_LCD_D7);
 
@@ -62,8 +75,7 @@ void setup()
   
   // Set the voltage of channel A.
   MCPDAC.setVoltage(CHANNEL_A, 4000 & 0x0fff); // 4000 mV
-  
-  
+
   
   pinMode(PIN_ENCODER_A, INPUT);
   pinMode(PIN_ENCODER_B, INPUT);
@@ -80,9 +92,9 @@ void loop()
   static unsigned long lcd_update_last = 0;
   
   int current = setCurrent();
-  
-  int temperature_mosfet = readThermistor(PIN_THERMISTOR_MOSFET);
-  int temperature_resistor = readThermistor(PIN_THERMISTOR_RESISTOR);
+ 
+  float temperature_mosfet = readTemperature(PIN_THERMISTOR_MOSFET);
+  //float temperature_resistor = readTemperature(PIN_THERMISTOR_RESISTOR);
   
   float volts = readVolts();
   int milliamps = readAmps();
@@ -105,13 +117,14 @@ void loop()
   
     lcd.setCursor(0, 1);
     lcd.print("m:");
-    lcd.print(temperature_mosfet);
+    lcd.print(temperature_mosfet, 0);
     lcd.print("C  ");
-    
+    /*
     lcd.setCursor(8, 1);
     lcd.print("r:");
-    lcd.print(temperature_resistor);
+    lcd.print(temperature_resistor, 0);
     lcd.print("C  ");
+    */
   }
   
 }
@@ -175,20 +188,41 @@ int readAmps()
 }
  
 /**
-  * Read the thermistor & translate to degrees Celcius.
-  *
-  * @see http://playground.arduino.cc/ComponentLib/Thermistor2
+ * Get the temperature from the thermistor
  */
-int readThermistor(byte pin) 
-{   
-  int raw_adc = analogRead(pin);
+float readTemperature(byte pin)
+{
+  uint8_t i;
+  float average = 0;
+  int samples[NUMSAMPLES];
+  
+  analogRead(pin); // Junk the first reading as the mux just changed
+  
+  // take N samples in a row
+  for (i=0; i< NUMSAMPLES; i++) {
+   samples[i] = analogRead(pin);
+  }
+  
+  for (i=0; i< NUMSAMPLES; i++) {
+     average += samples[i];
+  }
+  average /= NUMSAMPLES;
 
-  float temp;
-  temp = log(10000.0 * ((1024.0/raw_adc-1))); 
-  temp = 1 / (0.001129148 + (0.000234125 + (0.0000000876741 * temp * temp ))* temp );
-  temp = temp - 273.15; // Convert Kelvin to Celcius
+  // convert the value to resistance
+  average = 1023 / average - 1;
+  average = SERIESRESISTOR / average;
+
  
-  return (int) temp;
+  float steinhart;
+  steinhart = average / THERMISTORNOMINAL;     // (R/Ro)
+  steinhart = log(steinhart);                  // ln(R/Ro)
+  steinhart /= BCOEFFICIENT;                   // 1/B * ln(R/Ro)
+  steinhart += 1.0 / (TEMPERATURENOMINAL + 273.15); // + (1/To)
+  steinhart = 1.0 / steinhart;                 // Invert
+  steinhart -= 273.15;   
+
+  
+  return steinhart;
 }
 
 // Pin interrupt

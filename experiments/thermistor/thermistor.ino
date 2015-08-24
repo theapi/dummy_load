@@ -58,13 +58,13 @@ void loop() {
 
   lcd.setCursor(0, 1);
   lcd.print("m");
-  lcd.print(temperature_mosfet, 0);
+  lcd.print(temperature_mosfet, );
   lcd.print("C  ");
   
   
   lcd.setCursor(8, 1);
   lcd.print("r");
-  lcd.print(temperature_resistor, 0);
+  lcd.print(temperature_resistor, 1);
   lcd.print("C  ");
   
   delay(1000);
