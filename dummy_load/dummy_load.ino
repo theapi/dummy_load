@@ -155,7 +155,7 @@ float readVolts()
 
   // measured on a voltage divider 400K ---|--- 100K
   // so getting a fith of the actual voltage.
-  return value * (VREF / 1023.0) * 5 / 1000;
+  return value * (VREF / 1024.0) * 5 / 1000;
 }
  
 /**
@@ -171,7 +171,7 @@ int readAmps()
   value = alpha * measurement + (1-alpha) * value;
   // 2v = 1A
   // x2 gain from the op amp on a 1ohm resistor
-  return value * (VREF / 1023.0) * 2;
+  return value * (VREF / 1024.0) * 2;
 }
  
 /**
