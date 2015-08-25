@@ -104,6 +104,7 @@ void loop()
   float temperature_mosfet = readTemperature(PIN_THERMISTOR_MOSFET);
   float temperature_resistor = readTemperature(PIN_THERMISTOR_RESISTOR);
   
+  float min_volts = 2.7;
   float volts = readVolts();
   int milliamps = readAmps();
   
@@ -113,25 +114,36 @@ void loop()
     lcd_update_last = now;
     
     lcd.setCursor(0, 0);
-    if (set_current_fine) {
-      lcd.print("f ");
-    } else {
-      lcd.print("c ");
-    }
-    lcd.print(target_load);
-    lcd.print("mA  ");
-    lcd.print(milliamps);
-    lcd.print("mA  ");
     
+    lcd.print(target_load);
+    lcd.print("mA");
+    if (set_current_fine) {
+      lcd.print("|");
+    } else {
+      lcd.print(":");
+    }
+    
+    lcd.print(min_volts, 1);
+    //@todo if setting minimum voltage, "blink" the V
+    lcd.print("V ");
+    
+    lcd.setCursor(13, 0);
+    lcd.print(temperature_mosfet, 0);
+    lcd.print("C");
 
+
+    // Second row
     lcd.setCursor(0, 1);
+    lcd.print(milliamps);
+    lcd.print("mA ");
+    
+  
     lcd.print(volts, 1);
     lcd.print("V ");
-    lcd.print(volts * milliamps / 1000, 0);
-    lcd.print("W  ");
-    lcd.setCursor(10, 1);
-    lcd.print(temperature_mosfet, 0);
-    lcd.print("/");
+    //lcd.print(volts * milliamps / 1000, 0);
+    //lcd.print("W  ");
+
+    lcd.setCursor(13, 1);
     lcd.print(temperature_resistor, 0);
     lcd.print("C");
     
