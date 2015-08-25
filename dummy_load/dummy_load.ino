@@ -99,7 +99,7 @@ void loop()
 {
   static unsigned long lcd_update_last = 0;
   
-  int target_current = setCurrent();
+  int target_load = setTargetLoad();
  
   float temperature_mosfet = readTemperature(PIN_THERMISTOR_MOSFET);
   float temperature_resistor = readTemperature(PIN_THERMISTOR_RESISTOR);
@@ -118,7 +118,7 @@ void loop()
     } else {
       lcd.print("c ");
     }
-    lcd.print(target_current);
+    lcd.print(target_load);
     lcd.print("mA  ");
     lcd.print(milliamps);
     lcd.print("mA  ");
@@ -135,24 +135,30 @@ void loop()
   
 }
 
-int setCurrent() 
+/**
+ * Set the required load.
+ */
+int setTargetLoad() 
 {
   static int last = 0;
   static int val = 0;
   static int mv = 0;
-  static unsigned long encoder_switch_last = -1;
-  
-  unsigned long now = millis(); 
-  if (now - encoder_switch_last > 500) {
-    if (!digitalRead(PIN_ENCODER_SWITCH)) {
-      // toggle corse/fine
+  static byte down = 0;
+
+  if (!digitalRead(PIN_ENCODER_SWITCH)) {
+    if (down == 0) {
+      // Button has just been pressed.
+      down = 1;
+      // toggle coarse/fine
       if (set_current_fine == 1) {
         set_current_fine = 0;
       } else {
         set_current_fine = 1;
       }
-    }
-    encoder_switch_last = now;
+    } 
+  } else {
+    // Register the release of the button.
+    down = 0; 
   }
   
   // Read the encoder counter but do not change it as it changed by the interrupt.
@@ -164,7 +170,7 @@ int setCurrent()
       mv += val - last;
     } else {
       // coarse setting
-      mv += (val - last) * 50;
+      mv += (val - last) * 100;
     }
     
     if (mv < 0) {
