@@ -122,14 +122,18 @@ void loop()
     lcd.print("mA  ");
     lcd.print(milliamps);
     lcd.print("mA  ");
+    
 
     lcd.setCursor(0, 1);
     lcd.print(volts, 1);
-    lcd.print("V  ");
+    lcd.print("V ");
+    lcd.print(volts * milliamps / 1000, 0);
+    lcd.print("W  ");
+    lcd.setCursor(10, 1);
     lcd.print(temperature_mosfet, 0);
-    lcd.print("C ");
+    lcd.print("/");
     lcd.print(temperature_resistor, 0);
-    lcd.print("C ");
+    lcd.print("C");
     
   }
   
