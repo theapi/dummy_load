@@ -32,8 +32,9 @@
 #define PIN_VOLTS  A0
 #define PIN_AMPS   A1
 
-#define PIN_ENCODER_A 2
-#define PIN_ENCODER_B 3
+#define PIN_ENCODER_A      2
+#define PIN_ENCODER_B      3
+#define PIN_ENCODER_SWITCH 19
 
 // Thermistor datasheet http://uk.farnell.com/vishay-bc-components/ntcle100e3103jb0/thermistor-10k-5-ntc-rad/dp/1187031
 // resistance at 25 degrees C
@@ -50,6 +51,9 @@
 
 // initialize the library with the numbers of the interface pins
 LiquidCrystal lcd(PIN_LCD_RS, PIN_LCD_E, PIN_LCD_D4, PIN_LCD_D5, PIN_LCD_D6, PIN_LCD_D7);
+
+// Whether the current setting encoder should be coarse or fine.
+byte set_current_fine = 0;
 
 volatile int encoder_counter = 0; // changed by encoder input
 volatile byte encoder_ab = 0; // The previous & current reading
@@ -75,26 +79,30 @@ void setup()
   
   // Set the voltage of channel A.
   MCPDAC.setVoltage(CHANNEL_A, 4000 & 0x0fff); // 4000 mV
-
+  MCPDAC.setVoltage(CHANNEL_B, 0 & 0x0fff);
   
   pinMode(PIN_ENCODER_A, INPUT);
   pinMode(PIN_ENCODER_B, INPUT);
+  pinMode(PIN_ENCODER_SWITCH, INPUT_PULLUP);
+  
   
   attachInterrupt(0, encoder_ISR, CHANGE);
   attachInterrupt(1, encoder_ISR, CHANGE);
   
   // set up the LCD's number of columns and rows: 
   lcd.begin(16, 2);
+  
+  //Serial.begin(9600);
 }
 
 void loop() 
 {
   static unsigned long lcd_update_last = 0;
   
-  int current = setCurrent();
+  int target_current = setCurrent();
  
   float temperature_mosfet = readTemperature(PIN_THERMISTOR_MOSFET);
-  //float temperature_resistor = readTemperature(PIN_THERMISTOR_RESISTOR);
+  float temperature_resistor = readTemperature(PIN_THERMISTOR_RESISTOR);
   
   float volts = readVolts();
   int milliamps = readAmps();
@@ -105,46 +113,67 @@ void loop()
     lcd_update_last = now;
     
     lcd.setCursor(0, 0);
-    //lcd.print(encoder_counter / 4 * -1);
-    lcd.print(current);
-    lcd.print("  ");
+    if (set_current_fine) {
+      lcd.print("f ");
+    } else {
+      lcd.print("c ");
+    }
+    lcd.print(target_current);
+    lcd.print("mA  ");
+    lcd.print(milliamps);
+    lcd.print("mA  ");
+
+    lcd.setCursor(0, 1);
     lcd.print(volts, 1);
     lcd.print("V  ");
-    //lcd.setCursor(8, 0);
-    lcd.print(milliamps);
-    lcd.print("A  ");
-    
-  
-    lcd.setCursor(0, 1);
-    lcd.print("m:");
     lcd.print(temperature_mosfet, 0);
-    lcd.print("C  ");
-    /*
-    lcd.setCursor(8, 1);
-    lcd.print("r:");
+    lcd.print("C ");
     lcd.print(temperature_resistor, 0);
-    lcd.print("C  ");
-    */
+    lcd.print("C ");
+    
   }
   
 }
 
 int setCurrent() 
 {
-  static int last = -1;
+  static int last = 0;
+  static int val = 0;
   static int mv = 0;
+  static unsigned long encoder_switch_last = -1;
   
-  // Read the encoder counter but do not change it as it changed by the interrupt.
-  mv = (encoder_counter / 4) * -1 * 10;
-  
-  if (mv < 0) {
-    mv = 0; 
-  } else if (mv > 4000) {
-    mv = 4000; 
+  unsigned long now = millis(); 
+  if (now - encoder_switch_last > 500) {
+    if (!digitalRead(PIN_ENCODER_SWITCH)) {
+      // toggle corse/fine
+      if (set_current_fine == 1) {
+        set_current_fine = 0;
+      } else {
+        set_current_fine = 1;
+      }
+    }
+    encoder_switch_last = now;
   }
   
-  if (mv != last) {
-    last = mv;
+  // Read the encoder counter but do not change it as it changed by the interrupt.
+  val = (encoder_counter / 4) * -1;
+
+  if (val != last) {
+    
+    if (set_current_fine) {
+      mv += val - last;
+    } else {
+      // coarse setting
+      mv += (val - last) * 50;
+    }
+    
+    if (mv < 0) {
+      mv = 0; 
+    } else if (mv > 4000) {
+      mv = 4000; 
+    }
+    
+    last = val;
     MCPDAC.setVoltage(CHANNEL_B, mv & 0x0fff);
   }
   
