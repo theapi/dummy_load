@@ -38,16 +38,16 @@
 
 // Thermistor datasheet http://uk.farnell.com/vishay-bc-components/ntcle100e3103jb0/thermistor-10k-5-ntc-rad/dp/1187031
 // resistance at 25 degrees C
-#define THERMISTORNOMINAL 10000      
+#define THERMISTOR_NOMINAL 10000      
 // temp. for nominal resistance (almost always 25 C)
-#define TEMPERATURENOMINAL 25  
+#define THERMISTER_TEMPERATURE_NOMINAL 25  
 // how many samples to take and average, more takes longer
 // but is more 'smooth'
-#define NUMSAMPLES 5
+#define THERMISTER_NUMSAMPLES 3
 // The beta coefficient of the thermistor (usually 3000-4000)
-#define BCOEFFICIENT 3977
+#define THERMISTOR_BCOEFFICIENT 3977
 // the value of the 'other' resistor
-#define SERIESRESISTOR 9850   
+#define THERMISTOR_SERIES_RESISTOR 9850   
 
 // initialize the library with the numbers of the interface pins
 LiquidCrystal lcd(PIN_LCD_RS, PIN_LCD_E, PIN_LCD_D4, PIN_LCD_D5, PIN_LCD_D6, PIN_LCD_D7);
@@ -245,33 +245,32 @@ float readTemperature(byte pin)
 {
   uint8_t i;
   float average = 0;
-  int samples[NUMSAMPLES];
+  int samples[THERMISTER_NUMSAMPLES];
   
   analogRead(pin); // Junk the first reading as the mux just changed
   
   // take N samples in a row
-  for (i=0; i< NUMSAMPLES; i++) {
+  for (i=0; i< THERMISTER_NUMSAMPLES; i++) {
    samples[i] = analogRead(pin);
   }
   
-  for (i=0; i< NUMSAMPLES; i++) {
+  for (i=0; i< THERMISTER_NUMSAMPLES; i++) {
      average += samples[i];
   }
-  average /= NUMSAMPLES;
+  average /= THERMISTER_NUMSAMPLES;
 
   // convert the value to resistance
   average = 1023 / average - 1;
-  average = SERIESRESISTOR / average;
+  average = THERMISTOR_SERIES_RESISTOR / average;
 
- 
+
   float steinhart;
-  steinhart = average / THERMISTORNOMINAL;     // (R/Ro)
+  steinhart = average / THERMISTOR_NOMINAL;     // (R/Ro)
   steinhart = log(steinhart);                  // ln(R/Ro)
-  steinhart /= BCOEFFICIENT;                   // 1/B * ln(R/Ro)
-  steinhart += 1.0 / (TEMPERATURENOMINAL + 273.15); // + (1/To)
+  steinhart /= THERMISTOR_BCOEFFICIENT;                   // 1/B * ln(R/Ro)
+  steinhart += 1.0 / (THERMISTER_TEMPERATURE_NOMINAL + 273.15); // + (1/To)
   steinhart = 1.0 / steinhart;                 // Invert
   steinhart -= 273.15;   
-
   
   return steinhart;
 }
