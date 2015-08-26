@@ -36,6 +36,9 @@
 #define PIN_ENCODER_B      3
 #define PIN_ENCODER_SWITCH 19
 
+// Multiple switches on the analog pin.
+#define PIN_SWITCHES A4
+
 // Thermistor datasheet http://uk.farnell.com/vishay-bc-components/ntcle100e3103jb0/thermistor-10k-5-ntc-rad/dp/1187031
 // resistance at 25 degrees C
 #define THERMISTOR_NOMINAL 10000      
@@ -54,6 +57,16 @@ LiquidCrystal lcd(PIN_LCD_RS, PIN_LCD_E, PIN_LCD_D4, PIN_LCD_D5, PIN_LCD_D6, PIN
 
 // Whether the current setting encoder should be coarse or fine.
 byte set_current_fine = 0;
+
+/**
+ * switch 1 : bit 0 = load disable (0) / enable (1)
+ * switch 2 : bit 1 = set target load (0) / minimum volts (1)
+ * switch 3 : bit 3 = show minimum volts (0) / watts (1)
+ */
+byte switches_register = 0b00000000; // load disabled, encoder sets target load & show volts
+
+int target_load = 0;
+float min_volts = 2.7;
 
 volatile int encoder_counter = 0; // changed by encoder input
 volatile byte encoder_ab = 0; // The previous & current reading
@@ -99,12 +112,16 @@ void loop()
 {
   static unsigned long lcd_update_last = 0;
   
-  int target_load = setTargetLoad();
- 
+  if (bitRead(switches_register, 1)) {
+    min_volts = setMinimumVolts();
+  } else {
+    target_load = setTargetLoad();
+  }
+  
   float temperature_mosfet = readTemperature(PIN_THERMISTOR_MOSFET);
   float temperature_resistor = readTemperature(PIN_THERMISTOR_RESISTOR);
   
-  float min_volts = 2.7;
+  
   float volts = readVolts();
   int milliamps = readAmps();
   
@@ -123,9 +140,15 @@ void loop()
       lcd.print(":");
     }
     
-    lcd.print(min_volts, 1);
-    //@todo if setting minimum voltage, "blink" the V
-    lcd.print("V ");
+    // Not setting minimum volts & wanting to see the watts.
+    if (!bitRead(switches_register, 1) && bitRead(switches_register, 2)) {
+      lcd.print(volts * milliamps / 1000, 1);
+      lcd.print("W  ");
+    } else {
+      lcd.print(min_volts, 1);
+      //@todo if setting minimum voltage, "blink" the V
+      lcd.print("V ");
+    }
     
     lcd.setCursor(13, 0);
     lcd.print(temperature_mosfet, 0);
@@ -140,8 +163,7 @@ void loop()
   
     lcd.print(volts, 1);
     lcd.print("V ");
-    //lcd.print(volts * milliamps / 1000, 0);
-    //lcd.print("W  ");
+    //
 
     lcd.setCursor(13, 1);
     lcd.print(temperature_resistor, 0);
@@ -200,6 +222,14 @@ int setTargetLoad()
   }
   
   return mv;
+}
+
+/**
+ * @todo minimum volts
+ */
+float setMinimumVolts()
+{
+  return 2.7;
 }
 
 /**
