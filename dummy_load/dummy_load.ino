@@ -34,10 +34,11 @@
 
 #define PIN_ENCODER_A      2
 #define PIN_ENCODER_B      3
-#define PIN_ENCODER_SWITCH 19
 
-// Multiple switches on the analog pin.
-#define PIN_SWITCHES A4
+
+// Two switches on analog pins.
+#define PIN_SWITCHES_A A5
+#define PIN_SWITCHES_B A4
 
 // Thermistor datasheet http://uk.farnell.com/vishay-bc-components/ntcle100e3103jb0/thermistor-10k-5-ntc-rad/dp/1187031
 // resistance at 25 degrees C
@@ -52,9 +53,10 @@
 // the value of the 'other' resistor
 #define THERMISTOR_SERIES_RESISTOR 9850   
 
-#define SWITCHES_BIT_LOAD   0
-#define SWITCHES_BIT_TARGET 1
-#define SWITCHES_BIT_SHOW   2
+#define SWITCHES_BIT_FINE   0
+#define SWITCHES_BIT_LOAD   1
+#define SWITCHES_BIT_TARGET 2
+#define SWITCHES_BIT_SHOW   3
 
 // initialize the library with the numbers of the interface pins
 LiquidCrystal lcd(PIN_LCD_RS, PIN_LCD_E, PIN_LCD_D4, PIN_LCD_D5, PIN_LCD_D6, PIN_LCD_D7);
@@ -62,11 +64,12 @@ LiquidCrystal lcd(PIN_LCD_RS, PIN_LCD_E, PIN_LCD_D4, PIN_LCD_D5, PIN_LCD_D6, PIN
 
 
 /**
- * switch 1 : SWITCHES_BIT_LOAD  : bit 0 = load disable (0) / enable (1)
- * switch 2 : SWITCHES_BIT_TARGET: bit 1 = set target load (0) / minimum volts (1)
+ * switch 0 : SWITCHES_BIT_FINE  : bit 0 = coarse (0) / fine (1)
+ * switch 1 : SWITCHES_BIT_LOAD  : bit 1 = load disable (0) / enable (1)
+ * switch 2 : SWITCHES_BIT_TARGET: bit 2 = set target load (0) / minimum volts (1)
  * switch 3 : SWITCHES_BIT_SHOW  : bit 3 = show minimum volts (0) / watts (1)
  */
-byte switches_register = 0b00000001; // load enabled, encoder sets target load & show volts
+byte switches_register = 0b00000010; // load enabled, encoder sets target load & show volts
 
 int target_load = 0;
 int mosfet_gate_mv = 0;
@@ -102,7 +105,7 @@ void setup()
   
   pinMode(PIN_ENCODER_A, INPUT);
   pinMode(PIN_ENCODER_B, INPUT);
-  pinMode(PIN_ENCODER_SWITCH, INPUT_PULLUP);
+  
   
   
   attachInterrupt(0, encoder_ISR, CHANGE);
@@ -111,12 +114,14 @@ void setup()
   // set up the LCD's number of columns and rows: 
   lcd.begin(16, 2);
   
-  //Serial.begin(9600);
+  Serial.begin(9600);
 }
 
 void loop() 
 {
   static unsigned long lcd_update_last = 0;
+  
+  readSwitches();
   
   if (bitRead(switches_register, SWITCHES_BIT_TARGET)) {
     min_volts = getMinimumMilliVolts() / 1000;
@@ -199,11 +204,24 @@ void loop()
   
 }
 
+void readSwitches()
+{
+  analogRead(PIN_SWITCHES_A); // Junk the first reading as the mux just changed
+  byte val = (analogRead(PIN_SWITCHES_A) + analogRead(PIN_SWITCHES_A)) / 2;
+  
+  if (val > 45 && val < 65) {
+    bitWrite(switches_register, SWITCHES_BIT_FINE, 1);
+  } else {
+    bitWrite(switches_register, SWITCHES_BIT_FINE, 0);
+  }
+  //Serial.println(val);
+}  
+
 int getEncoderVal()
 {
   static byte down = 0;
 
-  if (!digitalRead(PIN_ENCODER_SWITCH)) {
+  if (bitRead(switches_register, SWITCHES_BIT_FINE)) {
     if (down == 0) {
       // Button has just been pressed.
       down = 1;
