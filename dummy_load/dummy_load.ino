@@ -52,6 +52,10 @@
 // the value of the 'other' resistor
 #define THERMISTOR_SERIES_RESISTOR 9850   
 
+#define SWITCHES_BIT_LOAD   0
+#define SWITCHES_BIT_TARGET 1
+#define SWITCHES_BIT_SHOW   2
+
 // initialize the library with the numbers of the interface pins
 LiquidCrystal lcd(PIN_LCD_RS, PIN_LCD_E, PIN_LCD_D4, PIN_LCD_D5, PIN_LCD_D6, PIN_LCD_D7);
 
@@ -59,14 +63,16 @@ LiquidCrystal lcd(PIN_LCD_RS, PIN_LCD_E, PIN_LCD_D4, PIN_LCD_D5, PIN_LCD_D6, PIN
 byte set_current_fine = 0;
 
 /**
- * switch 1 : bit 0 = load disable (0) / enable (1)
- * switch 2 : bit 1 = set target load (0) / minimum volts (1)
- * switch 3 : bit 3 = show minimum volts (0) / watts (1)
+ * switch 1 : SWITCHES_BIT_LOAD  : bit 0 = load disable (0) / enable (1)
+ * switch 2 : SWITCHES_BIT_TARGET: bit 1 = set target load (0) / minimum volts (1)
+ * switch 3 : SWITCHES_BIT_SHOW  : bit 3 = show minimum volts (0) / watts (1)
  */
 byte switches_register = 0b00000000; // load disabled, encoder sets target load & show volts
 
 int target_load = 0;
+int mosfet_gate_mv = 0;
 float min_volts = 2.7;
+
 
 volatile int encoder_counter = 0; // changed by encoder input
 volatile byte encoder_ab = 0; // The previous & current reading
@@ -112,10 +118,25 @@ void loop()
 {
   static unsigned long lcd_update_last = 0;
   
-  if (bitRead(switches_register, 1)) {
+  if (bitRead(switches_register, SWITCHES_BIT_TARGET)) {
     min_volts = setMinimumVolts();
   } else {
-    target_load = setTargetLoad();
+    target_load = getTargetLoad();
+  }
+  
+  // Set the DAC output if the required value has changed.
+  if (bitRead(switches_register, SWITCHES_BIT_LOAD)) {
+    // Load enabled
+    if (mosfet_gate_mv != target_load) {
+      mosfet_gate_mv = target_load;
+      MCPDAC.setVoltage(CHANNEL_B, mosfet_gate_mv & 0x0fff);
+    }
+  } else {
+    // Load disabled
+    if (mosfet_gate_mv != 0) {
+      mosfet_gate_mv = 0; 
+      MCPDAC.setVoltage(CHANNEL_B, mosfet_gate_mv & 0x0fff);
+    }
   }
   
   float temperature_mosfet = readTemperature(PIN_THERMISTOR_MOSFET);
@@ -141,7 +162,7 @@ void loop()
     }
     
     // Not setting minimum volts & wanting to see the watts.
-    if (!bitRead(switches_register, 1) && bitRead(switches_register, 2)) {
+    if (!bitRead(switches_register, SWITCHES_BIT_TARGET) && bitRead(switches_register, SWITCHES_BIT_SHOW)) {
       lcd.print(volts * milliamps / 1000, 1);
       lcd.print("W  ");
     } else {
@@ -174,9 +195,9 @@ void loop()
 }
 
 /**
- * Set the required load.
+ * get the required load.
  */
-int setTargetLoad() 
+int getTargetLoad() 
 {
   static int last = 0;
   static int val = 0;
@@ -218,7 +239,6 @@ int setTargetLoad()
     }
     
     last = val;
-    MCPDAC.setVoltage(CHANNEL_B, mv & 0x0fff);
   }
   
   return mv;
