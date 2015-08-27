@@ -67,7 +67,7 @@ byte set_current_fine = 0;
  * switch 2 : SWITCHES_BIT_TARGET: bit 1 = set target load (0) / minimum volts (1)
  * switch 3 : SWITCHES_BIT_SHOW  : bit 3 = show minimum volts (0) / watts (1)
  */
-byte switches_register = 0b00000000; // load disabled, encoder sets target load & show volts
+byte switches_register = 0b00000001; // load enabled, encoder sets target load & show volts
 
 int target_load = 0;
 int mosfet_gate_mv = 0;
