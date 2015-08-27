@@ -59,8 +59,7 @@
 // initialize the library with the numbers of the interface pins
 LiquidCrystal lcd(PIN_LCD_RS, PIN_LCD_E, PIN_LCD_D4, PIN_LCD_D5, PIN_LCD_D6, PIN_LCD_D7);
 
-// Whether the current setting encoder should be coarse or fine.
-byte set_current_fine = 0;
+
 
 /**
  * switch 1 : SWITCHES_BIT_LOAD  : bit 0 = load disable (0) / enable (1)
@@ -73,7 +72,8 @@ int target_load = 0;
 int mosfet_gate_mv = 0;
 float min_volts = 2.7;
 
-
+// Whether the encoder setting should be coarse or fine.
+byte encoder_fine = 0;
 volatile int encoder_counter = 0; // changed by encoder input
 volatile byte encoder_ab = 0; // The previous & current reading
 
@@ -119,9 +119,20 @@ void loop()
   static unsigned long lcd_update_last = 0;
   
   if (bitRead(switches_register, SWITCHES_BIT_TARGET)) {
-    min_volts = setMinimumVolts();
+    min_volts = getMinimumMilliVolts() / 1000;
   } else {
     target_load = getTargetLoad();
+  }
+  
+  float temperature_mosfet = readTemperature(PIN_THERMISTOR_MOSFET);
+  float temperature_resistor = readTemperature(PIN_THERMISTOR_RESISTOR);
+  
+  float volts = readVolts();
+  int milliamps = readAmps();
+  
+  // Turn off the load if the volts dropped below minimum.
+  if (volts <= min_volts) {
+    bitWrite(switches_register, SWITCHES_BIT_LOAD, 0);
   }
   
   // Set the DAC output if the required value has changed.
@@ -139,13 +150,7 @@ void loop()
     }
   }
   
-  float temperature_mosfet = readTemperature(PIN_THERMISTOR_MOSFET);
-  float temperature_resistor = readTemperature(PIN_THERMISTOR_RESISTOR);
-  
-  
-  float volts = readVolts();
-  int milliamps = readAmps();
-  
+
     
   unsigned long now = millis();
   if (now - lcd_update_last > 10) {
@@ -155,7 +160,7 @@ void loop()
     
     lcd.print(target_load);
     lcd.print("mA");
-    if (set_current_fine) {
+    if (encoder_fine) {
       lcd.print("|");
     } else {
       lcd.print(":");
@@ -194,14 +199,8 @@ void loop()
   
 }
 
-/**
- * get the required load.
- */
-int getTargetLoad() 
+int getEncoderVal()
 {
-  static int last = 0;
-  static int val = 0;
-  static int mv = 0;
   static byte down = 0;
 
   if (!digitalRead(PIN_ENCODER_SWITCH)) {
@@ -209,10 +208,10 @@ int getTargetLoad()
       // Button has just been pressed.
       down = 1;
       // toggle coarse/fine
-      if (set_current_fine == 1) {
-        set_current_fine = 0;
+      if (encoder_fine == 1) {
+        encoder_fine = 0;
       } else {
-        set_current_fine = 1;
+        encoder_fine = 1;
       }
     } 
   } else {
@@ -221,11 +220,23 @@ int getTargetLoad()
   }
   
   // Read the encoder counter but do not change it as it changed by the interrupt.
-  val = (encoder_counter / 4) * -1;
+  return (encoder_counter / 4) * -1;
+}
+
+/**
+ * get the required load.
+ */
+int getTargetLoad() 
+{
+  static int last = 0;
+  static int mv = 0;
+
+  // Read the encoder counter.
+  int val = getEncoderVal();
 
   if (val != last) {
     
-    if (set_current_fine) {
+    if (encoder_fine) {
       mv += val - last;
     } else {
       // coarse setting
@@ -247,9 +258,33 @@ int getTargetLoad()
 /**
  * @todo minimum volts
  */
-float setMinimumVolts()
+int getMinimumMilliVolts()
 {
-  return 2.7;
+  static int last = 0;
+  static int mv = 0;
+
+  // Read the encoder counter.
+  int val = getEncoderVal();
+
+  if (val != last) {
+    
+    if (encoder_fine) {
+      mv += val - last;
+    } else {
+      // coarse setting
+      mv += (val - last) * 100;
+    }
+    
+    if (mv < 0) {
+      mv = 0; 
+    } else if (mv > 20000) {
+      mv = 20000; 
+    }
+    
+    last = val;
+  }
+  
+  return mv;
 }
 
 /**
