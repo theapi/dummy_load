@@ -204,17 +204,47 @@ void loop()
   
 }
 
+/**
+ * switch 0 : SWITCHES_BIT_FINE  : bit 0 = coarse (0) / fine (1)
+ * switch 1 : SWITCHES_BIT_LOAD  : bit 1 = load disable (0) / enable (1)
+ * switch 2 : SWITCHES_BIT_TARGET: bit 2 = set target load (0) / minimum volts (1)
+ * switch 3 : SWITCHES_BIT_SHOW  : bit 3 = show minimum volts (0) / watts (1)
+ */
 void readSwitches()
 {
+  byte val = 0;
+  
   analogRead(PIN_SWITCHES_A); // Junk the first reading as the mux just changed
-  byte val = (analogRead(PIN_SWITCHES_A) + analogRead(PIN_SWITCHES_A)) / 2;
+  val = (analogRead(PIN_SWITCHES_A) + analogRead(PIN_SWITCHES_A)) / 2;
+  //Serial.print(val); Serial.print(" - ");
   
   if (val > 45 && val < 65) {
     bitWrite(switches_register, SWITCHES_BIT_FINE, 1);
   } else {
     bitWrite(switches_register, SWITCHES_BIT_FINE, 0);
   }
+  
+  if (val > 750 && val < 950) {
+    bitWrite(switches_register, SWITCHES_BIT_LOAD, 1);
+  } else {
+    bitWrite(switches_register, SWITCHES_BIT_LOAD, 0);
+  }
+  
+  analogRead(PIN_SWITCHES_B); // Junk the first reading as the mux just changed
+  val = (analogRead(PIN_SWITCHES_B) + analogRead(PIN_SWITCHES_B)) / 2;
   //Serial.println(val);
+  
+  if (val > 45 && val < 65) {
+    bitWrite(switches_register, SWITCHES_BIT_TARGET, 1);
+  } else {
+    bitWrite(switches_register, SWITCHES_BIT_TARGET, 0);
+  }
+  
+  if (val > 750 && val < 950) {
+    bitWrite(switches_register, SWITCHES_BIT_SHOW, 1);
+  } else {
+    bitWrite(switches_register, SWITCHES_BIT_SHOW, 0);
+  }
 }  
 
 int getEncoderVal()
