@@ -100,7 +100,7 @@ void setup()
   MCPDAC.shutdown(CHANNEL_B,false);
   
   // Set the voltage of channel A.
-  MCPDAC.setVoltage(CHANNEL_A, 4000 & 0x0fff); // 4000 mV
+  MCPDAC.setVoltage(CHANNEL_A, 3990 & 0x0fff); // 4000 mV
   MCPDAC.setVoltage(CHANNEL_B, 0 & 0x0fff);
   
   pinMode(PIN_ENCODER_A, INPUT);
