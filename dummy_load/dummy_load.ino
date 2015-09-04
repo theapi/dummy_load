@@ -58,6 +58,8 @@
 #define SWITCHES_BIT_TARGET 2
 #define SWITCHES_BIT_SHOW   3
 
+#define SERIAL_UPDATE_INTEVAL 1000 // How often to send data through serial
+
 // initialize the library with the numbers of the interface pins
 LiquidCrystal lcd(PIN_LCD_RS, PIN_LCD_E, PIN_LCD_D4, PIN_LCD_D5, PIN_LCD_D6, PIN_LCD_D7);
 
@@ -121,6 +123,7 @@ void loop()
 {
   static unsigned long lcd_update_last = 0;
   static unsigned long min_volts_blink = 0;
+  static unsigned long serial_update_last = 0;
   
   readSwitches();
   
@@ -208,6 +211,24 @@ void loop()
     
   }
   
+  // CSV for Processing
+  if (now - serial_update_last > SERIAL_UPDATE_INTEVAL) {
+    serial_update_last = now;
+    Serial.print(target_load); 
+    Serial.print(",");
+    Serial.print(milliamps); 
+    Serial.print(",");
+    Serial.print(min_volts); 
+    Serial.print(",");
+    Serial.print(volts); 
+    Serial.print(",");
+    Serial.print(temperature_mosfet); 
+    Serial.print(",");
+    Serial.print(temperature_resistor); 
+    Serial.print(",");
+    Serial.println();
+  }
+
 }
 
 /**
