@@ -120,6 +120,7 @@ void setup()
 void loop() 
 {
   static unsigned long lcd_update_last = 0;
+  static unsigned long min_volts_blink = 0;
   
   readSwitches();
   
@@ -177,8 +178,13 @@ void loop()
       lcd.print("W  ");
     } else {
       lcd.print(min_volts, 1);
-      //@todo if setting minimum voltage, "blink" the V
-      lcd.print("V ");
+      // if setting minimum voltage, "blink" the V
+      if (bitRead(switches_register, SWITCHES_BIT_TARGET) && (now - min_volts_blink > 500)) {
+        min_volts_blink = now;
+        lcd.print("  ");
+      } else {
+        lcd.print("V ");
+      }
     }
     
     lcd.setCursor(13, 0);
