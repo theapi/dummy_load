@@ -59,7 +59,7 @@
 #define SWITCHES_BIT_TARGET 2
 #define SWITCHES_BIT_SHOW   3
 
-#define SERIAL_UPDATE_INTEVAL 500 // How often to send data through serial
+#define SERIAL_UPDATE_INTERVAL 1000 // How often to send data through serial
 
 // initialize the library with the numbers of the interface pins
 LiquidCrystal lcd(PIN_LCD_RS, PIN_LCD_E, PIN_LCD_D4, PIN_LCD_D5, PIN_LCD_D6, PIN_LCD_D7);
@@ -103,7 +103,7 @@ void setup()
   MCPDAC.shutdown(CHANNEL_B,false);
   
   // Set the voltage of channel A.
-  MCPDAC.setVoltage(CHANNEL_A, 3990 & 0x0fff); // 4000 mV
+  MCPDAC.setVoltage(CHANNEL_A, 4086 & 0x0fff); // 4096 mV
   MCPDAC.setVoltage(CHANNEL_B, 0 & 0x0fff);
   
   pinMode(PIN_ENCODER_A, INPUT);
@@ -114,10 +114,17 @@ void setup()
   attachInterrupt(0, encoder_ISR, CHANGE);
   attachInterrupt(1, encoder_ISR, CHANGE);
   
+  Serial.begin(115200);
+  
   // set up the LCD's number of columns and rows: 
   lcd.begin(16, 2);
+  // Clear the screen
+  lcd.setCursor(0, 0);
+  lcd.print("                ");
+  lcd.setCursor(0, 1);
+  lcd.print("                ");
   
-  Serial.begin(115200);
+  
 }
 
 void loop() 
@@ -212,8 +219,7 @@ void loop()
     
   }
   
-  // CSV for Processing
-  if (now - serial_update_last > SERIAL_UPDATE_INTEVAL) {
+  if (now - serial_update_last > SERIAL_UPDATE_INTERVAL) {
     serial_update_last = now;
     Serial.print(target_load); 
     Serial.print(" ");
@@ -228,8 +234,9 @@ void loop()
     Serial.print(temperature_resistor); 
     Serial.print(" ");
     Serial.println();
+    //Serial.flush();
   }
-
+  
 }
 
 /**
@@ -514,5 +521,6 @@ int8_t encoder_read()
   // The index being the the lowest nibble of ab (ab & 0x0f)
   return ( enc_states[( encoder_ab & 0x0f )]);
 }
+
 
 
