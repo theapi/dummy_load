@@ -10,7 +10,7 @@ import processing.serial.*;
  
 Serial myPort;        // The serial port
 int xPos = 1;         // horizontal position of the graph
-float[] previousVals; 
+//float[] previousVals; 
  
 void setup () {
  // set the window size:
@@ -26,10 +26,12 @@ void setup () {
  // set inital background:
  background(255);
  
+ /*
  previousVals = new float[7];
  for (int i = 0; i < 7; i++) {
    previousVals[i] = 0.1; 
  }
+ */
 }
  
 void draw () {
@@ -62,14 +64,14 @@ void serialEvent (Serial myPort) {
        strokeWeight(2);
        //print(inByte);
        //print(" ");
-       if (previousVals[i] == 0.1) {
+       //if (previousVals[i] == 0.1) {
          point(xPos, height - inByte);
-       } else {
-         line(xPos, previousVals[i], xPos, height - inByte);
+       //} else {
+       //  line(xPos, previousVals[i], xPos, height - inByte);
          //line(xPos, height, xPos, height - inByte);
-       }
+      // }
   
-       previousVals[i] = height - inByte;
+       //previousVals[i] = height - inByte;
      }
      println("");
      // at the edge of the screen, go back to the beginning:
