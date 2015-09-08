@@ -225,12 +225,15 @@ void loop()
     Serial.print(" ");
     Serial.print(volts); 
     Serial.print(" ");
+    // watts
+    Serial.print(volts * milliamps / 1000); 
+    Serial.print(" ");
     Serial.print(temperature_mosfet); 
     Serial.print(" ");
     Serial.print(temperature_resistor); 
     Serial.print(" ");
     Serial.println();
-    //Serial.flush();
+    Serial.flush();
   }
   
 }
