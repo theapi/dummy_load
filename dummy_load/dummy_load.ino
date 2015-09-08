@@ -119,11 +119,7 @@ void setup()
   // set up the LCD's number of columns and rows: 
   lcd.begin(16, 2);
   // Clear the screen
-  lcd.setCursor(0, 0);
-  lcd.print("                ");
-  lcd.setCursor(0, 1);
-  lcd.print("                ");
-  
+  lcd.clear();
   
 }
 
@@ -170,7 +166,7 @@ void loop()
 
     
   unsigned long now = millis();
-  if (now - lcd_update_last > 10) {
+  if (now - lcd_update_last > 100) {
     lcd_update_last = now;
     
     lcd.setCursor(0, 0);
