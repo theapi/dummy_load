@@ -79,7 +79,7 @@ int mosfet_gate_mv = 0;
 float min_volts = 2.7;
 
 // Whether the encoder setting should be coarse or fine.
-byte encoder_fine = 0;
+byte encoder_fine = 1;
 volatile int encoder_counter = 0; // changed by encoder input
 volatile byte encoder_ab = 0; // The previous & current reading
 
@@ -182,15 +182,15 @@ void loop()
     // Not setting minimum volts & wanting to see the watts.
     if (!bitRead(switches_register, SWITCHES_BIT_TARGET) && bitRead(switches_register, SWITCHES_BIT_SHOW)) {
       lcd.print(volts * milliamps / 1000, 1);
-      lcd.print("W  ");
+      lcd.print("W   ");
     } else {
       lcd.print(min_volts, 1);
       // if setting minimum voltage, "blink" the V
       if (bitRead(switches_register, SWITCHES_BIT_TARGET) && (now - min_volts_blink > 500)) {
         min_volts_blink = now;
-        lcd.print("  ");
+        lcd.print("   ");
       } else {
-        lcd.print("V ");
+        lcd.print("V  ");
       }
     }
     
@@ -232,6 +232,11 @@ void loop()
     Serial.print(" ");
     Serial.print(temperature_resistor); 
     Serial.print(" ");
+    
+    // Switche for turning on the load.
+    Serial.print(bitRead(switches_register, SWITCHES_BIT_LOAD));
+    Serial.print(" ");
+    
     Serial.println();
     Serial.flush();
   }
@@ -250,15 +255,15 @@ void readSwitches()
   
   analogRead(PIN_SWITCHES_A); // Junk the first reading as the mux just changed
   val = (analogRead(PIN_SWITCHES_A) + analogRead(PIN_SWITCHES_A)) / 2;
-  //Serial.print(val); Serial.print(" - ");
+  //Serial.print(val); Serial.println(""); //Serial.print(" - ");
   
-  if (val > 45 && val < 65) {
+  if (val > 150) {
     bitWrite(switches_register, SWITCHES_BIT_FINE, 1);
   } else {
     bitWrite(switches_register, SWITCHES_BIT_FINE, 0);
   }
   
-  if (val > 750 && val < 950) {
+  if (val > 50 && val < 100) {
     bitWrite(switches_register, SWITCHES_BIT_LOAD, 1);
   } else {
     bitWrite(switches_register, SWITCHES_BIT_LOAD, 0);
@@ -268,13 +273,13 @@ void readSwitches()
   val = (analogRead(PIN_SWITCHES_B) + analogRead(PIN_SWITCHES_B)) / 2;
   //Serial.println(val);
   
-  if (val > 45 && val < 65) {
+  if (val > 150) {
     bitWrite(switches_register, SWITCHES_BIT_TARGET, 1);
   } else {
     bitWrite(switches_register, SWITCHES_BIT_TARGET, 0);
   }
   
-  if (val > 750 && val < 950) {
+  if (val > 50 && val < 100) {
     bitWrite(switches_register, SWITCHES_BIT_SHOW, 1);
   } else {
     bitWrite(switches_register, SWITCHES_BIT_SHOW, 0);
