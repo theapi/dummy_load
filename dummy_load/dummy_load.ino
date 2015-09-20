@@ -174,8 +174,19 @@ void loop()
     
     lcd.setCursor(0, 0);
     
+    if (target_load < 10) {
+      lcd.print(" ");
+    }
+    if (target_load < 100) {
+      lcd.print(" ");
+    }
+    if (target_load < 1000) {
+      lcd.print(" ");
+    }
     lcd.print(target_load);
     lcd.print("mA");
+    
+    
     if (encoder_fine) {
       lcd.print("|");
     } else {
@@ -204,6 +215,15 @@ void loop()
 
     // Second row
     lcd.setCursor(0, 1);
+    if (milliamps < 10) {
+      lcd.print(" ");
+    }
+    if (milliamps < 100) {
+      lcd.print(" ");
+    }
+    if (milliamps < 1000) {
+      lcd.print(" ");
+    }
     lcd.print(milliamps);
     lcd.print("mA ");
     
