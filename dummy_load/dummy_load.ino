@@ -28,7 +28,8 @@
 #define PIN_THERMISTOR_MOSFET   A2
 #define PIN_THERMISTOR_RESISTOR A3
 
-#define VREF  4000 //  4V reference from DAC
+#define VREF  4096 //  voltage reference from DAC
+#define VTRIM 8 // trim adjustment to get the correct reading
 #define PIN_DAC_CS 10
 #define PIN_VOLTS  A0
 #define PIN_AMPS   A1
@@ -205,8 +206,8 @@ void loop()
     lcd.print("mA ");
     
   
-    lcd.print(volts, 1);
-    lcd.print("V ");
+    lcd.print(volts);
+    //lcd.print("V ");
     //
 
     lcd.setCursor(13, 1);
@@ -379,19 +380,15 @@ int getMinimumMilliVolts()
  */
 float readVolts()
 {
-  // Running average
-  // @see http://playground.arduino.cc/Main/RunningAverage
-  static float value = 0;
-  float alpha = 0.7; // factor to tune
+    // Running average
+  static int value = 0;
+  float alpha = 0.8; // factor to tune
   
-  analogRead(PIN_VOLTS); // allow multiplexer to settle on this channel
-  int measurement = (analogRead(PIN_VOLTS) + analogRead(PIN_VOLTS)) / 2;
-  
+  int measurement = analogRead(PIN_VOLTS);
   value = alpha * measurement + (1-alpha) * value;
 
-  // measured on a voltage divider 400K ---|--- 100K
-  // so getting a fith of the actual voltage.
-  return value * (VREF / 1024.0) * 5 / 1000;
+  // x5 due to voltage divider 400k --- 100k
+  return ((value * (VREF / 1024.0) + VTRIM) * 5) / 1000.0;
 }
  
 /**
