@@ -386,6 +386,9 @@ float readVolts()
   int sum = 0;
   float value;
   
+  analogRead(PIN_VOLTS); // Allow the ADC mux to settle on changing input.
+  
+  // Now get real values.
   while (count < NUMSAMPLES) {
     sum += analogRead(PIN_VOLTS);
     count++;
