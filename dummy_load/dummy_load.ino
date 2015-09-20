@@ -28,8 +28,7 @@
 #define PIN_THERMISTOR_MOSFET   A2
 #define PIN_THERMISTOR_RESISTOR A3
 
-#define VREF  4096 //  voltage reference from DAC
-#define VTRIM 8 // trim adjustment to get the correct reading
+
 #define PIN_DAC_CS 10
 #define PIN_VOLTS  A0
 #define PIN_AMPS   A1
@@ -42,14 +41,17 @@
 #define PIN_SWITCHES_A A5
 #define PIN_SWITCHES_B A4
 
+#define VREF  4096 //  voltage reference from DAC
+// how many samples to take and average, more takes longer
+// but is more 'smooth'
+#define NUMSAMPLES 8
+
 // Thermistor datasheet http://uk.farnell.com/vishay-bc-components/ntcle100e3103jb0/thermistor-10k-5-ntc-rad/dp/1187031
 // resistance at 25 degrees C
 #define THERMISTOR_NOMINAL 10000      
 // temp. for nominal resistance (almost always 25 C)
 #define THERMISTER_TEMPERATURE_NOMINAL 25  
-// how many samples to take and average, more takes longer
-// but is more 'smooth'
-#define THERMISTER_NUMSAMPLES 3
+
 // The beta coefficient of the thermistor (usually 3000-4000)
 #define THERMISTOR_BCOEFFICIENT 3977
 // the value of the 'other' resistor
@@ -206,8 +208,8 @@ void loop()
     lcd.print("mA ");
     
   
-    lcd.print(volts);
-    //lcd.print("V ");
+    lcd.print(volts, 1);
+    lcd.print("V ");
     //
 
     lcd.setCursor(13, 1);
@@ -380,15 +382,18 @@ int getMinimumMilliVolts()
  */
 float readVolts()
 {
-    // Running average
-  static int value = 0;
-  float alpha = 0.8; // factor to tune
+  int count = 0;
+  int sum = 0;
+  float value;
   
-  int measurement = analogRead(PIN_VOLTS);
-  value = alpha * measurement + (1-alpha) * value;
+  while (count < NUMSAMPLES) {
+    sum += analogRead(PIN_VOLTS);
+    count++;
+  }
+  value = (float)sum / NUMSAMPLES;
 
   // x5 due to voltage divider 400k --- 100k
-  return ((value * (VREF / 1024.0) + VTRIM) * 5) / 1000.0;
+  return ((value * (VREF / 1024.0) ) * 5) / 1000.0;
 }
  
 /**
@@ -396,12 +401,16 @@ float readVolts()
  */
 int readAmps()
 {
-  // Running average
-  static int value = 0;
-  float alpha = 0.8; // factor to tune
+  int count = 0;
+  int sum = 0;
+  float value;
   
-  int measurement = analogRead(PIN_AMPS);
-  value = alpha * measurement + (1-alpha) * value;
+  while (count < NUMSAMPLES) {
+    sum += analogRead(PIN_AMPS);
+    count++;
+  }
+  value = (float)sum / NUMSAMPLES;
+
   // 2v = 1A
   // x2 gain from the op amp on a 1ohm resistor
   return value * (VREF / 1024.0) * 2;
@@ -412,29 +421,23 @@ int readAmps()
  */
 float readTemperature(byte pin)
 {
-  uint8_t i;
-  float average = 0;
-  int samples[THERMISTER_NUMSAMPLES];
+  int count = 0;
+  int sum = 0;
+  float value;
   
-  analogRead(pin); // Junk the first reading as the mux just changed
-  
-  // take N samples in a row
-  for (i=0; i< THERMISTER_NUMSAMPLES; i++) {
-   samples[i] = analogRead(pin);
+  while (count < NUMSAMPLES) {
+    sum += analogRead(pin);
+    count++;
   }
-  
-  for (i=0; i< THERMISTER_NUMSAMPLES; i++) {
-     average += samples[i];
-  }
-  average /= THERMISTER_NUMSAMPLES;
+  value = (float)sum / NUMSAMPLES;
 
   // convert the value to resistance
-  average = 1023 / average - 1;
-  average = THERMISTOR_SERIES_RESISTOR / average;
+  value = 1023 / value - 1;
+  value = THERMISTOR_SERIES_RESISTOR / value;
 
 
   float steinhart;
-  steinhart = average / THERMISTOR_NOMINAL;     // (R/Ro)
+  steinhart = value / THERMISTOR_NOMINAL;     // (R/Ro)
   steinhart = log(steinhart);                  // ln(R/Ro)
   steinhart /= THERMISTOR_BCOEFFICIENT;                   // 1/B * ln(R/Ro)
   steinhart += 1.0 / (THERMISTER_TEMPERATURE_NOMINAL + 273.15); // + (1/To)
