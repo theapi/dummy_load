@@ -5,9 +5,8 @@
  * Uses the MCPDAC library from http://hacking.majenko.co.uk/MCPDAC
  *
  *
- * https://github.com/theapi/dummy_load
+ * https://github.com/theapi/electronic_load
  *
- * Processing graphing from https://github.com/sebnil/RealtimePlotter
  */
 
 
