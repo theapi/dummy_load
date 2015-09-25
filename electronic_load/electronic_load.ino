@@ -82,7 +82,9 @@ float min_volts = 2.7;
 
 // Whether the encoder setting should be coarse or fine.
 byte encoder_fine = 1;
-volatile int encoder_counter = 0; // changed by encoder input
+volatile int encoder_counter_target = 0;
+volatile int encoder_counter_minvolt = -108; // Start at 2.7v (27 * 4 * 1)
+//volatile int encoder_counter = 0; // changed by encoder input
 volatile byte encoder_ab = 0; // The previous & current reading
 
 void setup() 
@@ -134,7 +136,7 @@ void loop()
   readSwitches();
   
   if (bitRead(switches_register, SWITCHES_BIT_TARGET)) {
-    min_volts = getMinimumMilliVolts() / 1000;
+    min_volts = getMinimumMilliVolts();
   } else {
     target_load = getTargetLoad();
   }
@@ -308,7 +310,7 @@ void readSwitches()
   }
 }  
 
-int getEncoderVal()
+int getEncoderVal(byte counter)
 {
   static byte down = 0;
 
@@ -328,8 +330,16 @@ int getEncoderVal()
     down = 0; 
   }
   
+  if (counter == 1) {
+    //encoder_counter_minvolt = encoder_counter;
+    return (encoder_counter_minvolt / 4) * -1;
+  } else {
+    //encoder_counter_target = encoder_counter;
+    return (encoder_counter_target / 4) * -1;
+  }
+  
   // Read the encoder counter but do not change it as it changed by the interrupt.
-  return (encoder_counter / 4) * -1;
+  //return (encoder_counter / 4) * -1;
 }
 
 /**
@@ -341,7 +351,7 @@ int getTargetLoad()
   static int mv = 0;
 
   // Read the encoder counter.
-  int val = getEncoderVal();
+  int val = getEncoderVal(0);
 
   if (val != last) {
     
@@ -365,15 +375,15 @@ int getTargetLoad()
 }
 
 /**
- * @todo minimum volts
+ * Minimum volts
  */
-int getMinimumMilliVolts()
+float getMinimumMilliVolts()
 {
   static int last = 0;
   static int mv = 0;
 
   // Read the encoder counter.
-  int val = getEncoderVal();
+  int val = getEncoderVal(1);
 
   if (val != last) {
     
@@ -392,8 +402,8 @@ int getMinimumMilliVolts()
     
     last = val;
   }
-  
-  return mv;
+
+  return mv / 10.0;
 }
 
 /**
@@ -476,7 +486,11 @@ void encoder_ISR()
   char tmpdata;
   tmpdata = encoder_read();
   if (tmpdata) {
-    encoder_counter += tmpdata;
+    if (bitRead(switches_register, SWITCHES_BIT_TARGET)) {
+      encoder_counter_minvolt += tmpdata;
+    } else {
+      encoder_counter_target += tmpdata;
+    }
   }
 }
 
