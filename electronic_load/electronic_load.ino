@@ -97,7 +97,7 @@ void setup()
   // Set the gain to "HIGH" mode - 0 to 4096mV.
   MCPDAC.setGain(CHANNEL_A,GAIN_HIGH);
   
-  // Set the gain to "HIGH" mode - 0 to 4096mV.
+  // Set the gain mode.
   MCPDAC.setGain(CHANNEL_B,GAIN_HIGH);
   
   // Do not shut down channels
@@ -146,7 +146,7 @@ void loop()
   int milliamps = readAmps();
   
   // Turn off the load if the volts dropped below minimum.
-  if (volts <= min_volts) {
+  if (volts < min_volts) {
     bitWrite(switches_register, SWITCHES_BIT_LOAD, 0);
   }
   
@@ -255,7 +255,7 @@ void loop()
     Serial.print(temperature_resistor); 
     Serial.print(" ");
     
-    // Switche for turning on the load.
+    // Switch for turning on the load.
     Serial.print(bitRead(switches_register, SWITCHES_BIT_LOAD));
     Serial.print(" ");
     
@@ -354,8 +354,8 @@ int getTargetLoad()
     
     if (mv < 0) {
       mv = 0; 
-    } else if (mv > 4000) {
-      mv = 4000; 
+    } else if (mv > 3300) { // 3300 is the opamp limit at 5 volts.
+      mv = 3300; 
     }
     
     last = val;
@@ -433,9 +433,10 @@ int readAmps()
   }
   value = (float)sum / NUMSAMPLES;
 
-  // 2v = 1A
-  // x2 gain from the op amp on a 1ohm resistor
-  return value * (VREF / 1024.0) * 2;
+  // 1v = 1A
+  // rom the op amp on a 1ohm resistor
+  //return value * (VREF / 1024.0);
+  return value * 4;
 }
  
 /**
