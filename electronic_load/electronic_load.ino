@@ -79,6 +79,7 @@ byte switches_register = 0b00000010; // load enabled, encoder sets target load &
 int target_load = 0;
 int mosfet_gate_mv = 0;
 float min_volts = 2.7;
+byte min_load_reached = 0; // note when threshold reached for hysteresis
 
 // Whether the encoder setting should be coarse or fine.
 byte encoder_fine = 1;
@@ -148,8 +149,13 @@ void loop()
   int milliamps = readAmps();
   
   // Turn off the load if the volts dropped below minimum.
-  if (volts < min_volts) {
+  if (min_load_reached || volts < min_volts) {
+    min_load_reached = 1;
     bitWrite(switches_register, SWITCHES_BIT_LOAD, 0);
+  } 
+  if (min_load_reached && volts > min_volts + 0.1) {
+    // hysteresis to prevent oscillation
+    min_load_reached = 0;
   }
   
   // Set the DAC output if the required value has changed.
@@ -447,6 +453,7 @@ int readAmps()
   // rom the op amp on a 1ohm resistor
   //return value * (VREF / 1024.0);
   return value * 4;
+  //return value;
 }
  
 /**
